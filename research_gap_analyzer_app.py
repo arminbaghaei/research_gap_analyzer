@@ -3,16 +3,16 @@ import requests
 import pandas as pd
 from keybert import KeyBERT
 from wordcloud import WordCloud
-from bertopic import BERTopic
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from fpdf import FPDF
 import matplotlib.pyplot as plt
 from io import BytesIO
-from fpdf import FPDF
 
-st.set_page_config(page_title="Research Gap Analyzer – Topic Modeling Edition", layout="wide")
+st.set_page_config(page_title="Research Gap Analyzer – Lite Edition", layout="wide")
 
-st.title("🔬 Research Gap Analyzer – Topic Modeling + PDF Export")
-st.markdown("Uses BERTopic to cluster abstracts and extract potential research gaps. You can also export the results as a PDF report.")
+st.title("🔬 Research Gap Analyzer – Lite (TF-IDF + KMeans)")
+st.markdown("This version uses TF-IDF and KMeans clustering instead of BERTopic and is fully compatible with Streamlit Cloud.")
 
 def extract_keywords(text, top_n=15):
     kw_model = KeyBERT()
@@ -45,6 +45,20 @@ def generate_pdf_report(keywords, suggestion):
     buffer.seek(0)
     return buffer
 
+def cluster_texts(texts, n_clusters=5):
+    vectorizer = TfidfVectorizer(stop_words='english', max_df=0.8)
+    X = vectorizer.fit_transform(texts)
+    km = KMeans(n_clusters=n_clusters, random_state=42)
+    km.fit(X)
+    clusters = km.predict(X)
+    top_terms = []
+    order_centroids = km.cluster_centers_.argsort()[:, ::-1]
+    terms = vectorizer.get_feature_names_out()
+    for i in range(n_clusters):
+        cluster_keywords = [terms[ind] for ind in order_centroids[i, :5]]
+        top_terms.append(", ".join(cluster_keywords))
+    return top_terms
+
 query = st.text_input("🔍 Enter your research topic or keywords")
 
 if query and st.button("Run Analysis"):
@@ -62,13 +76,6 @@ if query and st.button("Run Analysis"):
         if not docs:
             st.warning("No abstracts found.")
         else:
-            st.success(f"Retrieved {len(docs)} abstracts. Running BERTopic...")
-            topic_model = BERTopic(verbose=False)
-            topics, probs = topic_model.fit_transform(docs)
-
-            fig = topic_model.visualize_barchart(top_n_topics=5)
-            st.plotly_chart(fig, use_container_width=True)
-
             all_text = " ".join(docs)
             keywords = extract_keywords(all_text)
             freq_dict = {kw: score for kw, score in keywords}
@@ -76,6 +83,10 @@ if query and st.button("Run Analysis"):
             st.subheader("☁️ Keyword Cloud")
             wordcloud = generate_wordcloud(freq_dict)
             st.image(wordcloud.to_array(), use_container_width=True)
+
+            st.subheader("🧠 Top Extracted Keywords")
+            for kw, score in keywords:
+                st.markdown(f"- {kw} ({score:.2f})")
 
             st.subheader("🧭 Suggested Research Gap")
             if len(keywords) >= 3:
@@ -91,10 +102,15 @@ if query and st.button("Run Analysis"):
                 st.download_button("📄 Download PDF Report", data=pdf_buffer, file_name="research_gap_report.pdf")
             else:
                 st.warning("Not enough keywords for suggestion or export.")
+
+            st.subheader("📊 Clusters from Abstracts")
+            top_terms = cluster_texts(docs)
+            for i, terms in enumerate(top_terms):
+                st.markdown(f"**Cluster {i+1}**: {terms}")
+
     else:
         st.error("Semantic Scholar API failed.")
-else:
-    st.info("Enter a topic and click 'Run Analysis'.")
+        st.code(response.text)
 
 st.markdown("---")
 st.markdown("Developed by **Abdollah Baghaei Daemei** – [ResearchMate.org](https://www.researchmate.org)")
