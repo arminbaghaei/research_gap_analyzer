@@ -1,9 +1,8 @@
 streamlit
-pandas
 requests
+pandas
 matplotlib
 scikit-learn
 wordcloud
 keybert
 fpdf
-bertopic[all]
