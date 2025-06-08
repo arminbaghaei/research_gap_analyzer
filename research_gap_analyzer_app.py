@@ -1,52 +1,70 @@
 import streamlit as st
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
+import requests
 from keybert import KeyBERT
-import matplotlib.pyplot as plt
 from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Research Gap Analyzer", layout="centered")
+st.set_page_config(page_title="Research Gap Analyzer (API)", layout="centered")
 
-st.title("🔍 Research Gap Analyzer")
+st.title("📡 Research Gap Analyzer – Live Literature Mode")
 st.write("""
-Paste your research abstract or topic below. This tool will analyze recent literature trends,
-extract key themes, and suggest potentially underexplored areas for research.
+This version connects to the Semantic Scholar API to search recent papers,
+extract keywords from their abstracts, and suggest possible research gaps.
 """)
 
-abstract = st.text_area("✍️ Enter your abstract or research topic", height=250)
+query = st.text_input("🔍 Enter your research topic or keywords")
 
-if abstract and st.button("Analyze Research Gaps"):
-    st.info("Extracting key terms and analyzing trends...")
+if query and st.button("Analyze Research Gaps"):
+    st.info("Searching Semantic Scholar and analyzing abstracts...")
 
-    # Use KeyBERT for keyword extraction
-    kw_model = KeyBERT()
-    keywords = kw_model.extract_keywords(abstract, top_n=10, stop_words='english')
+    # Semantic Scholar API request
+    url = "https://api.semanticscholar.org/graph/v1/paper/search"
+    params = {
+        "query": query,
+        "limit": 20,
+        "fields": "title,abstract"
+    }
+    response = requests.get(url, params=params)
 
-    # Show top keywords
-    st.subheader("🧠 Top Keywords")
-    for kw, score in keywords:
-        st.markdown(f"- {kw} ({score:.2f})")
+    if response.status_code == 200:
+        data = response.json()
+        papers = data.get("data", [])
 
-    # Generate Word Cloud
-    freq_dict = {kw: score for kw, score in keywords}
-    st.subheader("☁️ Keyword Cloud")
-    wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
-    st.image(wordcloud.to_array(), use_column_width=True)
+        if not papers:
+            st.warning("No papers found. Try a broader query.")
+        else:
+            all_abstracts = " ".join(paper.get("abstract", "") for paper in papers if paper.get("abstract"))
+            kw_model = KeyBERT()
+            keywords = kw_model.extract_keywords(all_abstracts, top_n=15, stop_words='english')
 
-    # Suggest research gaps based on keyword spread
-    st.subheader("🧭 Suggested Research Gaps")
-    if len(keywords) >= 3:
-        strong = keywords[0][0]
-        weak = keywords[-1][0]
-        suggestion = (
-            f"- While **{strong}** is well-represented, **{weak}** appears less frequently.\n"
-            f"- Consider exploring the relationship between **{strong}** and **{weak}** as a novel direction in your field."
-        )
-        st.markdown(suggestion)
+            st.subheader("🧠 Top Extracted Keywords")
+            for kw, score in keywords:
+                st.markdown(f"- {kw} ({score:.2f})")
+
+            # Generate word cloud
+            freq_dict = {kw: score for kw, score in keywords}
+            wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
+
+            st.subheader("☁️ Keyword Cloud")
+            st.image(wordcloud.to_array(), use_column_width=True)
+
+            # Suggest a gap
+            st.subheader("🧭 Suggested Research Gap")
+            if len(keywords) >= 3:
+                strong = keywords[0][0]
+                weak = keywords[-1][0]
+                suggestion = f"""
+                - **{strong}** is frequently studied.  
+                - **{weak}** is less discussed, yet related.  
+                - You may explore how **{weak}** interacts with **{strong}** as a potential research angle.
+                """
+                st.markdown(suggestion)
+            else:
+                st.markdown("Not enough keywords to suggest a research gap.")
+
     else:
-        st.markdown("- Not enough keywords to infer a gap. Try a longer abstract.")
-
-    st.success("This is a prototype. Future versions will fetch papers, perform topic modeling, and visualize trends.")
-
+        st.error("Failed to retrieve data from Semantic Scholar API.")
+        st.code(response.text)
+        
 st.markdown("---")
 st.markdown("Developed by **Abdollah Baghaei Daemei** – [ResearchMate.org](https://www.researchmate.org)")
