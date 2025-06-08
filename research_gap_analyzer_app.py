@@ -40,10 +40,8 @@ def generate_pdf_report(keywords, suggestion):
     pdf.set_font("Arial", size=10)
     pdf.multi_cell(0, 10, suggestion)
 
-    buffer = BytesIO()
-    pdf.output(buffer)
-    buffer.seek(0)
-    return buffer
+    pdf_bytes = pdf.output(dest='S').encode('latin1')  # ✅ Fixed
+    return BytesIO(pdf_bytes)
 
 def cluster_texts(texts, n_clusters=5):
     vectorizer = TfidfVectorizer(stop_words='english', max_df=0.8)
