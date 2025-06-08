@@ -41,12 +41,14 @@ if query and st.button("Analyze Research Gaps"):
             for kw, score in keywords:
                 st.markdown(f"- {kw} ({score:.2f})")
 
-            # Generate word cloud
+            # Generate Word Cloud
             freq_dict = {kw: score for kw, score in keywords}
-            wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
-
             st.subheader("☁️ Keyword Cloud")
-            st.image(wordcloud.to_array(), use_column_width=True)
+            if freq_dict:
+                wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
+                st.image(wordcloud.to_array(), use_column_width=True)
+            else:
+                st.warning("⚠️ No keywords found to generate a word cloud.")
 
             # Suggest a gap
             st.subheader("🧭 Suggested Research Gap")
@@ -65,6 +67,6 @@ if query and st.button("Analyze Research Gaps"):
     else:
         st.error("Failed to retrieve data from Semantic Scholar API.")
         st.code(response.text)
-        
+
 st.markdown("---")
 st.markdown("Developed by **Abdollah Baghaei Daemei** – [ResearchMate.org](https://www.researchmate.org)")
