@@ -46,11 +46,9 @@ if query and st.button("Analyze Research Gaps"):
 
             # Generate Word Cloud
             if freq_dict:
-    st.subheader("☁️ Keyword Cloud")
-    wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
-    st.image(wordcloud.to_array(), use_container_width=True)
-else:
-    st.warning("⚠️ No keywords found to generate a word cloud.")
+                st.subheader("☁️ Keyword Cloud")
+                wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
+                st.image(wordcloud.to_array(), use_container_width=True)
             else:
                 st.warning("⚠️ No keywords found to generate a word cloud.")
 
