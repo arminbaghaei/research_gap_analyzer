@@ -41,10 +41,12 @@ if query and st.button("Analyze Research Gaps"):
             for kw, score in keywords:
                 st.markdown(f"- {kw} ({score:.2f})")
 
-            # Generate Word Cloud
+            # Prepare frequencies
             freq_dict = {kw: score for kw, score in keywords}
-            st.subheader("☁️ Keyword Cloud")
+
+            # Generate Word Cloud
             if freq_dict:
+                st.subheader("☁️ Keyword Cloud")
                 wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
                 st.image(wordcloud.to_array(), use_column_width=True)
             else:
