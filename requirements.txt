@@ -5,5 +5,5 @@ matplotlib
 scikit-learn
 wordcloud
 keybert
-bertopic
 fpdf
+bertopic[all]
