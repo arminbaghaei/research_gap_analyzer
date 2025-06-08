@@ -1,6 +1,9 @@
 streamlit
+pandas
 requests
-keybert
 matplotlib
+scikit-learn
 wordcloud
-sentence-transformers
+keybert
+bertopic
+fpdf
