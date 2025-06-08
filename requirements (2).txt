@@ -1,0 +1,7 @@
+streamlit
+keybert
+scikit-learn
+pandas
+matplotlib
+sentence-transformers
+wordcloud
