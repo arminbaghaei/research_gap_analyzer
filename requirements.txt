@@ -1,7 +1,6 @@
 streamlit
+requests
 keybert
-scikit-learn
-pandas
 matplotlib
-sentence-transformers
 wordcloud
+sentence-transformers
