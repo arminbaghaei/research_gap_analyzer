@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import pandas as pd
-from keybert import KeyBERT
 from wordcloud import WordCloud
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
@@ -21,27 +20,13 @@ st.set_page_config(page_title="Research Gap Analyzer – Lite Edition", layout="
 st.title("🔬 Research Gap Analyzer – Lite (TF-IDF + KMeans + BERTopic)")
 st.markdown("This version uses TF-IDF and KMeans clustering and optionally BERTopic for advanced topic modeling.")
 
-def extract_keywords(text, top_n=15):
-    kw_model = KeyBERT()
-    return kw_model.extract_keywords(text, top_n=top_n, stop_words='english')
-
-def generate_wordcloud(freq_dict):
-    wordcloud = WordCloud(width=800, height=300, background_color="white").generate_from_frequencies(freq_dict)
-    return wordcloud
-
-def generate_pdf_report(keywords, suggestion):
+def generate_pdf_report(suggestion):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, txt="Research Gap Analyzer Report", ln=1, align="C")
     pdf.ln(10)
 
-    pdf.set_font("Arial", size=10)
-    pdf.cell(200, 10, txt="Top Extracted Keywords:", ln=1)
-    for kw, score in keywords:
-        pdf.cell(200, 10, txt=f"- {kw} ({score:.2f})", ln=1)
-
-    pdf.ln(10)
     pdf.set_font("Arial", 'B', size=10)
     pdf.cell(200, 10, txt="Suggested Research Gap:", ln=1)
     pdf.set_font("Arial", size=10)
@@ -89,33 +74,6 @@ if query and st.button("Run Analysis"):
         if not docs:
             st.warning("No abstracts found.")
         else:
-            all_text = " ".join(docs)
-            keywords = extract_keywords(all_text)
-            freq_dict = {kw: score for kw, score in keywords}
-
-            st.subheader("☁️ Keyword Cloud")
-            wordcloud = generate_wordcloud(freq_dict)
-            st.image(wordcloud.to_array(), use_container_width=True)
-
-            st.subheader("🧠 Top Extracted Keywords")
-            for kw, score in keywords:
-                st.markdown(f"- {kw} ({score:.2f})")
-
-            st.subheader("🧭 Suggested Research Gap")
-            if len(keywords) >= 3:
-                strong = keywords[0][0]
-                weak = keywords[-1][0]
-                suggestion = (
-                    f"Despite growing interest in **{strong}**, "
-                    f"the role of **{weak}** remains underexplored in the context of **{query}**."
-                )
-                st.markdown(suggestion)
-
-                pdf_buffer = generate_pdf_report(keywords, suggestion)
-                st.download_button("📄 Download PDF Report", data=pdf_buffer, file_name="research_gap_report.pdf")
-            else:
-                st.warning("Not enough keywords for suggestion or export.")
-
             st.subheader("📊 Clusters from Abstracts (TF-IDF + KMeans)")
             top_terms = cluster_texts(docs)
             for i, terms in enumerate(top_terms):
@@ -127,6 +85,17 @@ if query and st.button("Run Analysis"):
                 st.warning(err)
             else:
                 st.dataframe(topic_df)
+
+            # Suggest a dummy research gap based on cluster 1
+            if top_terms:
+                suggestion = (
+                    f"While existing research clusters around terms like **{top_terms[0]}**, "
+                    f"other thematic areas may be underrepresented and require further exploration."
+                )
+                st.subheader("🧭 Suggested Research Gap")
+                st.markdown(suggestion)
+                pdf_buffer = generate_pdf_report(suggestion)
+                st.download_button("📄 Download PDF Report", data=pdf_buffer, file_name="research_gap_report.pdf")
     else:
         st.error("Semantic Scholar API failed.")
         st.code(response.text)
