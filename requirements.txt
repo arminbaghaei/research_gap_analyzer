@@ -1,9 +1,10 @@
 streamlit
-bertopic
-pandas
+keybert
 scikit-learn
+pandas
 requests
 matplotlib
 wordcloud
 fpdf
 sentence-transformers
+bertopic
