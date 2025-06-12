@@ -9,10 +9,17 @@ from fpdf import FPDF
 import matplotlib.pyplot as plt
 from io import BytesIO
 
+# Optional: BERTopic
+try:
+    from bertopic import BERTopic
+    BER_TOPIC_AVAILABLE = True
+except ImportError:
+    BER_TOPIC_AVAILABLE = False
+
 st.set_page_config(page_title="Research Gap Analyzer – Lite Edition", layout="wide")
 
-st.title("🔬 Research Gap Analyzer – Lite (TF-IDF + KMeans)")
-st.markdown("This version uses TF-IDF and KMeans clustering instead of BERTopic and is fully compatible with Streamlit Cloud.")
+st.title("🔬 Research Gap Analyzer – Lite (TF-IDF + KMeans + BERTopic)")
+st.markdown("This version uses TF-IDF and KMeans clustering and optionally BERTopic for advanced topic modeling.")
 
 def extract_keywords(text, top_n=15):
     kw_model = KeyBERT()
@@ -33,14 +40,14 @@ def generate_pdf_report(keywords, suggestion):
     pdf.cell(200, 10, txt="Top Extracted Keywords:", ln=1)
     for kw, score in keywords:
         pdf.cell(200, 10, txt=f"- {kw} ({score:.2f})", ln=1)
-    
+
     pdf.ln(10)
     pdf.set_font("Arial", 'B', size=10)
     pdf.cell(200, 10, txt="Suggested Research Gap:", ln=1)
     pdf.set_font("Arial", size=10)
     pdf.multi_cell(0, 10, suggestion)
 
-    pdf_bytes = pdf.output(dest='S').encode('latin1')  # ✅ Fixed
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
     return BytesIO(pdf_bytes)
 
 def cluster_texts(texts, n_clusters=5):
@@ -56,6 +63,14 @@ def cluster_texts(texts, n_clusters=5):
         cluster_keywords = [terms[ind] for ind in order_centroids[i, :5]]
         top_terms.append(", ".join(cluster_keywords))
     return top_terms
+
+def run_bertopic(texts):
+    if not BER_TOPIC_AVAILABLE:
+        return "BERTopic not available. Install it with: pip install bertopic", None
+    model = BERTopic()
+    topics, probs = model.fit_transform(texts)
+    topic_df = model.get_topic_info()
+    return None, topic_df
 
 query = st.text_input("🔍 Enter your research topic or keywords")
 
@@ -101,11 +116,17 @@ if query and st.button("Run Analysis"):
             else:
                 st.warning("Not enough keywords for suggestion or export.")
 
-            st.subheader("📊 Clusters from Abstracts")
+            st.subheader("📊 Clusters from Abstracts (TF-IDF + KMeans)")
             top_terms = cluster_texts(docs)
             for i, terms in enumerate(top_terms):
                 st.markdown(f"**Cluster {i+1}**: {terms}")
 
+            st.subheader("📚 Advanced Topic Modeling (BERTopic)")
+            err, topic_df = run_bertopic(docs)
+            if err:
+                st.warning(err)
+            else:
+                st.dataframe(topic_df)
     else:
         st.error("Semantic Scholar API failed.")
         st.code(response.text)
